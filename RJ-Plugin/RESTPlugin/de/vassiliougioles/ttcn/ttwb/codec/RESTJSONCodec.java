@@ -392,11 +392,17 @@ public class RESTJSONCodec extends AbstractBaseCodec implements TTCNRESTMapping,
 			RecordValue rv = (RecordValue) fieldToEncode;
 			String[] fieldNames = rv.getFieldNames();
 			for (int i = 0; i < fieldNames.length; i++) {
-				builder.append(String2JSON(fieldNames[i])).append(": ");
-				builder.append(TTCN2JSONencode(rv.getField(fieldNames[i])));
-				if (i < fieldNames.length - 1) {
-					builder.append(", ");
+				if (rv.getField(fieldNames[i]).toString() != "omit") {
+					builder.append(String2JSON(fieldNames[i])).append(": ");
+					builder.append(TTCN2JSONencode(rv.getField(fieldNames[i])));
+					if (i < fieldNames.length - 1) {
+						builder.append(", ");
+					}
 				}
+			}
+			if (builder.toString().endsWith(", ")) {
+				builder = builder.deleteCharAt(builder.length() - 1);
+				builder = builder.deleteCharAt(builder.length() - 1);
 			}
 			builder.append(" }");
 			break;
