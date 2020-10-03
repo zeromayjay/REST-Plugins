@@ -410,7 +410,9 @@ public class RESTJSONCodec extends AbstractBaseCodec implements TTCNRESTMapping,
 			builder.append(String2JSON(((CharstringValue) fieldToEncode).getString()));
 			break;
 		case TciTypeClass.UNIVERSAL_CHARSTRING:
-			builder.append(String2JSON(((UniversalCharstringValue) fieldToEncode).getString()));
+			String s = String2JSON(((UniversalCharstringValue) fieldToEncode).getString());
+			String s_new = s.replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r");
+			builder.append(s_new);
 			break;
 		case TciTypeClass.INTEGER:
 			builder.append(((IntegerValue) fieldToEncode).getInt());
