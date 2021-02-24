@@ -300,25 +300,109 @@ public class RESTJSONCodec extends AbstractBaseCodec implements TTCNRESTMapping,
 		return null;
 	}
 
+	/*
+	 * 
+	 * The instance-id contains
+	 * a String service name, 
+	 * a VersionId version number, 
+	 * a String commit-id and
+	 * a String commit time
+	 * 
+	 * A VersionId contains
+	 * a int major digit
+	 * a int minor digit
+	 * a int patch digit
+	 * 
+	 * 
+	 */
+	
 	private Value decodeHeader(Value _headers, ResponseMessage rm) {
 		RecordOfValue headers = (RecordOfValue) _headers;
 
 		HttpFields httpFields = rm.getHeaderFields();
+
 		int i = 0;
 		for (HttpField httpField : httpFields) {
+			
 			RecordValue header = (RecordValue) headers.getElementType().newInstance();
 			UniversalCharstringValue name = (UniversalCharstringValue) header.getField("name");
 			UniversalCharstringValue val = (UniversalCharstringValue) header.getField("val");
 			name.setString(httpField.getName());
 			val.setString(httpField.getValue());
 
-			header.setField("name", name);
-			header.setField("val", val);
-
-			headers.setField(i++, header);
+			/*
+			 * if exist: we can decode the given Instance Id
+			 * 
+			 */
+			if(httpField.getName().equals("Instance-ID")) {
+				
+				JSONArray listOfInstanceIds;
+				try {
+					
+					/*
+					 * TODO: if we take the value of the httpfield "Instance-Id" which is given as a JSON-String-list,
+					 * then httpField deletes the double quotes somehow. When parsing with the JSONparser, we need to add the double quotes again
+					 * Is there any elegant method to do this?
+					 */
+					
+					/*
+					 * It works with this hardcoded String.
+					 * But the Content of the HttpFields are without double quotes.
+					 */
+					String rawString = "[{\"serviceName\":\"AuthService\",\"versionNumber\":{\"majorDigit\":1,\"minorDigit\":0,\"patchDigit\":0},\"commitId\":\"69956d7\",\"commitTime\":\"20210104-145833\"},{\"serviceName\":\"UserIDService\",\"versionNumber\":{\"majorDigit\":1,\"minorDigit\":2,\"patchDigit\":0},\"commitId\":\"69956d7\",\"commitTime\":\"20210104-145833\"}]";
+//					rm.parsedHeader(httpField);
+//					String rawString = rm.getHeaderFields().toString();
+//					String anotherRawString = httpField.getValue();
+//					
+//				    rawString = rawString.replaceAll("(?<=: ?)(?![ \\{\\[])(.+?)(?=,|})", "\"$1\"");
+//					HttpParser httpParser = new HttpParser();
+					
+					/*
+					 * iterate through all instance-id-objects in the given list
+					 * pick the values of the object and put it correctly to 'name' and 'val'
+					 */
+					listOfInstanceIds = (JSONArray) parser.parse(rawString);
+					for (Object instanceId : listOfInstanceIds ) {
+						
+						String majorDigitName = "instance-id." + ((JSONObject) instanceId).get("serviceName") + ".versionNumber.majorDigit";
+						String majorDigitValue = ((((JSONObject)((JSONObject) instanceId).get("versionNumber")).get("majorDigit"))).toString();
+						headers.setField(i++, createHeader(majorDigitName, majorDigitValue, headers));
+						
+					}
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
+				
+			}
+			else {
+				header.setField("name", name);
+				header.setField("val", val);
+	
+				headers.setField(i++, header);
+			}
 		}
-
+		
+		
+		
 		return _headers;
+	}
+	
+	/*
+	 * Outsourced method to create the RecordValue header for attributes of the instance-id object
+	 */
+	private RecordValue createHeader(String name, String val, RecordOfValue headers) {
+		RecordValue header = (RecordValue) headers.getElementType().newInstance(); 
+		UniversalCharstringValue nameField = (UniversalCharstringValue) header.getField("name");
+		UniversalCharstringValue valField = (UniversalCharstringValue) header.getField("val");
+		
+		nameField.setString(name);
+		valField.setString(val);
+		
+		header.setField("name", nameField);
+		header.setField("val", valField);
+		
+		return header;
+		
 	}
 
 	private Value decodeBody(Value _body, ResponseMessage rm) {
